@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v1.7.4] - Dependency Cleanup
+**Release Date**: 2025-06-15
+
+### Removed
+- Removed unnecessary `base64` package from `requirements.txt` (native Python module), thanks to @hyperlexus
+
+---
+
 ## [v1.7.3] - Documentation Updates
 **Release Date**: 2025-05-28
 
