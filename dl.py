@@ -10,6 +10,7 @@ import base64
 import concurrent.futures
 import random
 import time
+import argparse
 from urllib.parse import urlparse
 
 # List of common user agents for rotation
@@ -111,53 +112,49 @@ def deobfuscate_embedded_json(raw_json: str):
     except Exception:
         return None
 
+def extract_episode_tag(url_or_line: str, index: int = 1) -> str:
+    match = re.search(r'(S\d{2}E\d{2})', url_or_line, re.IGNORECASE)
+    return match.group(1).upper() if match else f"S01E{index:02d}"
+
+def generate_custom_filename(base: str, episode_tag: str, ext: str = ".mp4") -> str:
+    safe_base = re.sub(r'[\\/*?:"<>|]', "_", base)
+    return f"{safe_base}_{episode_tag}{ext}"
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Multi-threaded downloader for video sources with advanced detection methods.",
+        epilog=get_custom_help_text(),
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("mode", choices=["-u", "-l"], help="Mode: -u for single URL, -l for list file")
+    parser.add_argument("target", help="URL or path to .txt file depending on mode")
+    parser.add_argument("-w", "--workers", type=int, default=4, help="Parallel downloads for -l (default: 4)")
+    parser.add_argument("--name", help="Base name for output files (used with --numbering or placeholders)")
+    parser.add_argument("--numbering", action="store_true", help="Add S01E01-style numbering based on line order")
+    parser.add_argument("--dry-run", action="store_true", help="Print actions without downloading")
+    return parser.parse_args()
+
 def main():
-    args = sys.argv  # saving the cli arguments into args
+    args = parse_arguments()
 
-    try:
-        args[1]     #try if args has a value at index 1
-    except IndexError:
-        print("Please use a parameter. Use -h for Help") #if not, tells the user to specify an argument
-        quit()
+    if args.mode == "-u":
+        download(args.target, args.name, args.dry_run)
+    elif args.mode == "-l":
+        list_dl(args.target, workers=args.workers)
 
-    if args[1] == "-h":     #if the first user argument is "-h" call the help function
-        help()
-    elif args[1] == "-u":   #if the first user argument is "-u" call the download function
-        URL = args[2]
-        download(URL)
-    elif args[1] == "-l":   #if the first user argument is "-l" call the list_dl (list download) function
-        doc = args[2]
-        
-        if len(args) > 3 and args[3] == "-w":   #if the second user argument is "-w" set the max_workers to the value of the third argument
-            workers = int(args[4])
-        else:
-            workers = 4
-            
-        list_dl(doc, workers)
-    else:
-        URL = args[1]       #if the first user argument is the <URL> call the download function
-        download(URL)
-
-def help():
-    print("Version History:")
-    print("- Version v1.7.1 (Improved bait detection)")
-    print("- Version v1.7.0 (Method 8 for source detection by @Domkeykong)")
-    print("- Version v1.6.0 (Method 7 for source detection by @ottobauer)")
-    print("- Version v1.5.1 (Documentation updates: help descriptions, README usage info)")
-    print("- Version v1.5.0 (Improved source detection and bait handling)")
-    print("- Version v1.4.0 (Forked by MPZ-00)")
-    print("- Version v1.3.1 (Forked by HerobrineTV, Fixed issues with finding the Download Links)")
-    print("")
-    print("______________")
-    print("Arguments:")
-    print("-h shows this help")
-    print("-u <URL> downloads the <URL> you specify")
-    print("-l <doc> opens the <doc> you specify and downloads every URL line after line")
-    print("-w <number> sets the number of parallel workers for list downloads (default: 4)")
-    print("<URL> just the URL as Argument works the same as with -u Argument")
-    print("______________")
-    print("")
-    print("Credits to @NikOverflow, @cuitrlal, @cybersnash, @HerobrineTV and @MPZ-00 on GitHub for contributing")
+def get_custom_help_text():
+    return (
+        "\nVersion History:\n"
+        "- Version v1.8.0 (CLI improvements, custom filename generation, episode tagging, dry-run mode)\n"
+        "- Version v1.7.1 (Improved bait detection)\n"
+        "- Version v1.7.0 (Method 8 for source detection by @Domkeykong)\n"
+        "- Version v1.6.0 (Method 7 for source detection by @ottobauer)\n"
+        "- Version v1.5.1 (Documentation updates: help descriptions, README usage info)\n"
+        "- Version v1.5.0 (Improved source detection and bait handling)\n"
+        "- Version v1.4.0 (Forked by MPZ-00)\n"
+        "- Version v1.3.1 (Forked by HerobrineTV, Fixed issues with finding the Download Links)\n"
+        "\nCredits to @NikOverflow, @cuitrlal, @cybersnash, @HerobrineTV and @MPZ-00 on GitHub for contributing\n"
+    )
 
 def list_dl(doc, workers=4):
     """
@@ -761,5 +758,13 @@ def clean_base64(s):
         print(f"[!] Invalid base64 string: {e}")
         return None
         
+def extract_episode_tag(url: str) -> str:
+    match = re.search(r'(S\d{1,2}E\d{1,2})', url, re.IGNORECASE)
+    return match.group(1) if match else None
+
+def generate_filename(base_name: str, episode_tag: str, ext=".mp4") -> str:
+    clean_name = re.sub(r'[\\/*?:"<>|]', "_", base_name)
+    return f"{clean_name}_{episode_tag}{ext}" if episode_tag else f"{clean_name}{ext}"
+
 if __name__ == "__main__":
     main()
