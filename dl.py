@@ -123,7 +123,7 @@ def generate_custom_filename(base: str, episode_tag: str, ext: str = ".mp4") -> 
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Multi-threaded downloader for video sources with advanced detection methods.",
-        epilog=get_custom_help_text(),
+        epilog=get_version_history(),
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("mode", choices=["-u", "-l"], help="Mode: -u for single URL, -l for list file")
@@ -142,7 +142,7 @@ def main():
     elif args.mode == "-l":
         list_dl(args.target, workers=args.workers)
 
-def get_custom_help_text():
+def get_version_history():
     return (
         "\nVersion History:\n"
         "- Version v1.8.0 (CLI improvements, custom filename generation, episode tagging, dry-run mode)\n"
@@ -156,29 +156,41 @@ def get_custom_help_text():
         "\nCredits to @NikOverflow, @cuitrlal, @cybersnash, @HerobrineTV and @MPZ-00 on GitHub for contributing\n"
     )
 
-def list_dl(doc, workers=4):
+def list_dl(doc, args):
     """
     Reads lines from the specified doc file and downloads them in parallel.
     Lines starting with '#' and empty lines are ignored.
     """
-    tmp_list = open(doc).readlines()
-    fixed_list = [el for el in tmp_list if not el.startswith('#')]
-    lines = [link.strip() for link in fixed_list if link.strip()]
+    lines = []
+    title = args.name
+    # tmp_list = open(doc).readlines()  
+    # fixed_list = [el for el in tmp_list if not el.startswith('#')]
+    # lines = [link.strip() for link in fixed_list if link.strip()]
 
-    print(f"Downloading {len(lines)} files in parallel with {workers} threads...")
+    with open(doc, 'r', encoding='utf-8') as f:
+        for i, line in enumerate(f):
+            line = line.strip()
+            if i == 0 and line.startswith("#:"):
+                title = line[2:].strip()
+                continue
+            if not line or line.startswith('#'):
+                continue
+            lines.append(line)
+
+    print(f"Downloading {len(lines)} files in parallel with {args.workers} threads...")
 
     # Execute parallel downloads with up to 4 threads
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
         future_to_link = {executor.submit(download, link): link for link in lines}
 
         for i, future in enumerate(concurrent.futures.as_completed(future_to_link), start=1):
-            link = future_to_link[future]
+            future = future_to_link[future]
             print(f"Download {i} / {len(lines)}")
-            print(f"echo Link: {link}")
+            print(f"echo Link: {future}")
             try:
                 future.result()
             except Exception as e:
-                print(f"[!] Error downloading {link}: {e}")
+                print(f"[!] Error downloading {future}: {e}")
 
     # Remove .part files after all downloads are complete
     delpartfiles()
