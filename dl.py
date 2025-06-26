@@ -181,16 +181,20 @@ def list_dl(doc, args):
 
     # Execute parallel downloads with up to 4 threads
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-        future_to_link = {executor.submit(download, link): link for link in lines}
+        futures = []
+        for i, link in enumerate(lines, 1):
+            episode = extract_episode_tag(link, i) if args.numbering else None
+            filename = generate_custom_filename(title, episode) if title and episode else None
+            futures.append(executor.submit(download, link, filename, args.dry_run))
 
-        for i, future in enumerate(concurrent.futures.as_completed(future_to_link), start=1):
-            future = future_to_link[future]
-            print(f"Download {i} / {len(lines)}")
-            print(f"echo Link: {future}")
+        for i, future in enumerate(concurrent.futures.as_completed(futures), start=1):
             try:
                 future.result()
+                print(f"Download {i} / {len(lines)} completed successfully.")
+                print(f"Link: '{future}'")
             except Exception as e:
-                print(f"[!] Error downloading {future}: {e}")
+                print(f"[!] Error downloading file {i}: {e}")
+        return
 
     # Remove .part files after all downloads are complete
     delpartfiles()
