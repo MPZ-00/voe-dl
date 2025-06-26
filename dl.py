@@ -126,8 +126,11 @@ def parse_arguments():
         epilog=get_version_history(),
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("mode", choices=["-u", "-l"], help="Mode: -u for single URL, -l for list file")
-    parser.add_argument("target", help="URL or path to .txt file depending on mode")
+    
+    parser.add_argument("target", help="URL or path to .txt file")
+    parser.add_argument("-u", "--url", dest="is_url", action="store_true", help="Treat target as single URL")
+    parser.add_argument("-l", "--list", dest="is_list", action="store_true", help="Treat target as list file")
+
     parser.add_argument("-w", "--workers", type=int, default=4, help="Parallel downloads for -l (default: 4)")
     parser.add_argument("--name", help="Base name for output files (used with --numbering or placeholders)")
     parser.add_argument("--numbering", action="store_true", help="Add S01E01-style numbering based on line order")
@@ -137,10 +140,10 @@ def parse_arguments():
 def main():
     args = parse_arguments()
 
-    if args.mode == "-u":
-        download(args.target, args.name, args.dry_run)
-    elif args.mode == "-l":
-        list_dl(args.target, workers=args.workers)
+    if args.is_list:
+        list_dl(args.target, args)
+    else:
+        download(args.target, args)
 
 def get_version_history():
     return (
@@ -163,9 +166,6 @@ def list_dl(doc, args):
     """
     lines = []
     title = args.name
-    # tmp_list = open(doc).readlines()  
-    # fixed_list = [el for el in tmp_list if not el.startswith('#')]
-    # lines = [link.strip() for link in fixed_list if link.strip()]
 
     with open(doc, 'r', encoding='utf-8') as f:
         for i, line in enumerate(f):
@@ -190,18 +190,17 @@ def list_dl(doc, args):
         for i, future in enumerate(concurrent.futures.as_completed(futures), start=1):
             try:
                 future.result()
-                print(f"Download {i} / {len(lines)} completed successfully.")
-                print(f"Link: '{future}'")
+                print(f"[*] Download {i} / {len(lines)} completed successfully.")
+                print(f"[*] Link: '{future}'")
             except Exception as e:
                 print(f"[!] Error downloading file {i}: {e}")
-        return
 
     # Remove .part files after all downloads are complete
     delpartfiles()
 
 
-def download(URL):
-    URL = str(URL)
+def download(url, custom_name=None, dry_run=False):
+    URL = str(url)
 
     # Add a small random delay to mimic human behavior
     time.sleep(random.uniform(1, 3))
@@ -640,7 +639,7 @@ def download(URL):
                 basename, ext = os.path.splitext(name)
                 if not ext:
                     ext = ".mp4"
-                name = f"{basename}_SS{ext}"
+                name = f"{basename}_SS{ext}" if not custom_name else f"{custom_name}{ext}"
 
                 print(f"[*] Downloading MP4 stream: {link}")
                 ydl_opts = {
@@ -671,7 +670,7 @@ def download(URL):
                 basename, ext = os.path.splitext(name)
                 if not ext:
                     ext = ".mp4"  # HLS streams are typically downloaded as MP4
-                name = f"{basename}_SS{ext}"
+                name = f"{basename}_SS{ext}" if not custom_name else f"{custom_name}{ext}"
 
                 print(f"[*] Downloading HLS stream: {link}")
                 ydl_opts = {
@@ -682,7 +681,10 @@ def download(URL):
                 }
                 with YoutubeDL(ydl_opts) as ydl:
                     try:
-                        ydl.download([link])
+                        if not dry_run:
+                            ydl.download([link])
+                        else:
+                            print(f"[Dry Run] Would download: {link} to {name}")
                     except Exception as e:
                         print(f"[!] YoutubeDL error: {e}")
             else:
