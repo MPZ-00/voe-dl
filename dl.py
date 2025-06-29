@@ -1,4 +1,5 @@
 # coding=utf-8
+import copy
 import sys, os, glob
 import re
 import requests
@@ -130,7 +131,6 @@ def parse_arguments():
     parser.add_argument("target", help="URL or path to .txt file")
     parser.add_argument("-u", "--url", dest="is_url", action="store_true", help="Treat target as single URL")
     parser.add_argument("-l", "--list", dest="is_list", action="store_true", help="Treat target as list file")
-
     parser.add_argument("-w", "--workers", type=int, default=4, help="Parallel downloads for -l (default: 4)")
     parser.add_argument("--name", help="Base name for output files (used with --numbering or placeholders)")
     parser.add_argument("--numbering", action="store_true", help="Add S01E01-style numbering based on line order")
@@ -185,7 +185,9 @@ def list_dl(doc, args):
         for i, link in enumerate(lines, 1):
             episode = extract_episode_tag(link, i) if args.numbering else None
             filename = generate_custom_filename(title, episode) if title and episode else None
-            futures.append(executor.submit(download, link, filename, args.dry_run))
+            thread_args = copy.deepcopy(args)
+            thread_args.name = filename if filename else args.name
+            futures.append(executor.submit(download, link, thread_args))
 
         for i, future in enumerate(concurrent.futures.as_completed(futures), start=1):
             try:
@@ -199,8 +201,10 @@ def list_dl(doc, args):
     delpartfiles()
 
 
-def download(url, custom_name=None, dry_run=False):
+def download(url, args):
     URL = str(url)
+    custom_name = args.name if args.name else None
+    dry_run = args.dry_run if args.dry_run else False
 
     # Add a small random delay to mimic human behavior
     time.sleep(random.uniform(1, 3))
