@@ -193,7 +193,7 @@ def list_dl(doc, args):
             try:
                 future.result()
                 print(f"[*] Download {i} / {len(lines)} completed successfully.")
-                print(f"[*] Link: '{future}'")
+                print(f"[*] Link: '{futures[future]}'")
             except Exception as e:
                 print(f"[!] Error downloading file {i}: {e}")
 
