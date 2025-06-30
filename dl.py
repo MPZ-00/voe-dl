@@ -179,6 +179,7 @@ def list_dl(doc, args):
 
     print(f"Downloading {len(lines)} files in parallel with {args.workers} threads...")
 
+    future_to_link = {}
     # Execute parallel downloads with up to 4 threads
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = []
@@ -187,13 +188,15 @@ def list_dl(doc, args):
             filename = generate_custom_filename(title, episode) if title and episode else None
             thread_args = copy.deepcopy(args)
             thread_args.name = filename if filename else args.name
-            futures.append(executor.submit(download, link, thread_args))
+            future = executor.submit(download, link, thread_args)
+            futures.append(future)
+            future_to_link[future] = link
 
         for i, future in enumerate(concurrent.futures.as_completed(futures), start=1):
             try:
                 future.result()
                 print(f"[*] Download {i} / {len(lines)} completed successfully.")
-                print(f"[*] Link: '{futures[future]}'")
+                print(f"[*] Link: '{future_to_link[future]}'")
             except Exception as e:
                 print(f"[!] Error downloading file {i}: {e}")
 
