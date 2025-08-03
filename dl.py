@@ -129,8 +129,9 @@ def parse_arguments():
     )
     
     parser.add_argument("target", help="URL or path to .txt file")
-    parser.add_argument("-u", "--url", dest="is_url", action="store_true", help="Treat target as single URL")
-    parser.add_argument("-l", "--list", dest="is_list", action="store_true", help="Treat target as list file")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-u", "--url", dest="is_url", action="store_true", help="Treat target as single URL")
+    group.add_argument("-l", "--list", dest="is_list", action="store_true", help="Treat target as list file")
     parser.add_argument("-w", "--workers", type=int, default=4, help="Parallel downloads for -l (default: 4)")
     parser.add_argument("--name", help="Base name for output files (used with --numbering or placeholders)")
     parser.add_argument("--numbering", action="store_true", help="Add S01E01-style numbering based on line order")
