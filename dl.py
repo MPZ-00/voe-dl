@@ -10,6 +10,7 @@ from yt_dlp import YoutubeDL
 import base64
 import concurrent.futures
 import threading
+import signal
 import random
 import time
 import argparse
@@ -23,6 +24,15 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 ]
+
+# Global stop event for handling Ctrl+C across all threads
+_global_stop_event = threading.Event()
+
+def signal_handler(signum, frame):
+    """Handle Ctrl+C signal"""
+    print("\n[!] Ctrl+C detected - Aborting all downloads...")
+    _global_stop_event.set()
+    # Don't call sys.exit() here, let the main thread handle cleanup
 
 # Create a session that persists across requests
 session = requests.Session()
@@ -145,16 +155,20 @@ def main():
     if args.is_list:
         list_dl(args.target, args)
     else:
+        # Register signal handler for Ctrl+C
+        signal.signal(signal.SIGINT, signal_handler)
+        _global_stop_event.clear()
+        
         print("[*] Press Ctrl+C to abort download")
-        stop_event = threading.Event()
         try:
-            download(args.target, args, stop_event)
+            download(args.target, args, _global_stop_event)
         except KeyboardInterrupt:
-            print("\n[!] Ctrl+C detected - Aborting download...")
-            stop_event.set()
-            time.sleep(0.5)
-            print("[*] Abort complete.")
+            print("\n[!] KeyboardInterrupt - Aborting download...")
+            _global_stop_event.set()
         finally:
+            if _global_stop_event.is_set():
+                time.sleep(0.5)
+                print("[*] Abort complete.")
             print("[*] Cleaning up temporary files...")
             delpartfiles()
 
@@ -178,6 +192,12 @@ def list_dl(doc, args):
     Lines starting with '#' and empty lines are ignored.
     Supports graceful abort with Ctrl+C.
     """
+    # Register signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # Clear the global stop event
+    _global_stop_event.clear()
+    
     lines = []
     title = args.name
 
@@ -194,8 +214,6 @@ def list_dl(doc, args):
     print(f"Downloading {len(lines)} files in parallel with {args.workers} threads...")
     print("[*] Press Ctrl+C to abort all downloads")
 
-    # Create stop event for graceful shutdown
-    stop_event = threading.Event()
     future_to_link = {}
     
     try:
@@ -203,11 +221,14 @@ def list_dl(doc, args):
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
             futures = []
             for i, link in enumerate(lines, 1):
+                if _global_stop_event.is_set():
+                    break
+                    
                 episode = extract_episode_tag(link, i) if args.numbering else None
                 filename = generate_custom_filename(title, episode) if title and episode else None
                 thread_args = copy.deepcopy(args)
                 thread_args.name = filename if filename else args.name
-                future = executor.submit(download, link, thread_args, stop_event)
+                future = executor.submit(download, link, thread_args, _global_stop_event)
                 futures.append(future)
                 future_to_link[future] = link
 
@@ -216,39 +237,40 @@ def list_dl(doc, args):
             total = len(futures)
             download_count = 0
             
-            while len(completed) < total:
-                # Check for completed futures with short timeout
-                for future in futures:
+            while len(completed) < total and not _global_stop_event.is_set():
+                # Use as_completed with very short timeout
+                done, not_done = concurrent.futures.wait(
+                    [f for f in futures if f not in completed],
+                    timeout=0.1,
+                    return_when=concurrent.futures.FIRST_COMPLETED
+                )
+                
+                # Process completed futures
+                for future in done:
                     if future in completed:
                         continue
                     
                     try:
-                        # Use short timeout to make Ctrl+C responsive
-                        result = future.result(timeout=0.1)
+                        result = future.result(timeout=0)
                         completed.add(future)
                         download_count += 1
                         print(f"[*] Download {download_count} / {total} completed successfully.")
                         print(f"[*] Link: '{future_to_link[future]}'")
-                    except concurrent.futures.TimeoutError:
-                        # Future not ready yet, continue polling
-                        continue
                     except Exception as e:
                         completed.add(future)
                         download_count += 1
                         print(f"[!] Error downloading file {download_count}: {e}")
                         print(f"[!] Link: '{future_to_link[future]}'")
-                
-                # Small sleep to prevent CPU spinning
-                if len(completed) < total:
-                    time.sleep(0.05)
                     
     except KeyboardInterrupt:
-        print("\n[!] Ctrl+C detected - Aborting all downloads...")
-        stop_event.set()
-        print("[*] Waiting for active downloads to stop...")
-        time.sleep(1)  # Give threads time to notice stop_event
-        print("[*] Abort complete.")
+        print("\n[!] KeyboardInterrupt - Aborting all downloads...")
+        _global_stop_event.set()
     finally:
+        # Wait for threads to stop
+        if _global_stop_event.is_set():
+            print("[*] Waiting for active downloads to stop...")
+            time.sleep(1)  # Give threads time to notice stop_event
+            print("[*] Abort complete.")
         # Always clean up .part files
         print("[*] Cleaning up temporary files...")
         delpartfiles()
