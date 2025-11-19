@@ -28,6 +28,10 @@ USER_AGENTS = [
 # Global stop event for handling Ctrl+C across all threads
 _global_stop_event = threading.Event()
 
+class DownloadAbortedException(Exception):
+    """Raised when a download is aborted by user (Ctrl+C)"""
+    pass
+
 def signal_handler(signum, frame):
     """Handle Ctrl+C signal"""
     print("\n[!] Ctrl+C detected - Aborting all downloads...")
@@ -232,6 +236,10 @@ def list_dl(doc, args):
             if not line or line.startswith('#'):
                 continue
             lines.append(line)
+    
+    # If --numbering is used without --name, use "Episode" as default
+    if args.numbering and not title:
+        title = "Episode"
 
     print(f"Downloading {len(lines)} files in parallel with {args.workers} threads...")
     print("[*] Press Ctrl+C to abort all downloads")
@@ -249,7 +257,7 @@ def list_dl(doc, args):
                 
             episode = extract_episode_tag(link, i) if args.numbering else None
             filename = generate_custom_filename(title, episode) if title and episode else None
-            thread_args = copy.deepcopy(args)
+            thread_args = copy.copy(args)
             thread_args.name = filename if filename else args.name
             future = executor.submit(download, link, thread_args, _global_stop_event)
             futures.append(future)
@@ -811,7 +819,7 @@ def download(url, args, stop_event=None):
                     # Progress hook to check for abort
                     def progress_hook(d):
                         if stop_event and stop_event.is_set():
-                            raise Exception("Download aborted by user")
+                            raise DownloadAbortedException("Download aborted by user")
                     
                     ydl_opts = {
                         'outtmpl': name,
@@ -823,6 +831,9 @@ def download(url, args, stop_event=None):
                     with YoutubeDL(ydl_opts) as ydl:
                         try:
                             ydl.download([link])
+                        except DownloadAbortedException:
+                            # Re-raise abort exception to be handled by caller
+                            raise
                         except Exception as e:
                             # Check if it was aborted
                             if stop_event and stop_event.is_set():
@@ -860,7 +871,7 @@ def download(url, args, stop_event=None):
                     # Progress hook to check for abort
                     def progress_hook(d):
                         if stop_event and stop_event.is_set():
-                            raise Exception("Download aborted by user")
+                            raise DownloadAbortedException("Download aborted by user")
                     
                     ydl_opts = {
                         'outtmpl': name,
@@ -872,6 +883,9 @@ def download(url, args, stop_event=None):
                     with YoutubeDL(ydl_opts) as ydl:
                         try:
                             ydl.download([link])
+                        except DownloadAbortedException:
+                            # Re-raise abort exception to be handled by caller
+                            raise
                         except Exception as e:
                             # Check if it was aborted
                             if stop_event and stop_event.is_set():

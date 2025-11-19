@@ -87,6 +87,15 @@ Run:
 voe-dl -l links.txt
 ```
 
+### Setting Title in List File
+You can specify a custom title for all files by adding a special comment at the start of your list file:
+```
+#: My Series Title
+https://voe.sx/xxxxxxx
+https://voe.sx/yyyyyyy
+```
+This title will be used when combined with `--numbering` instead of the `--name` argument.
+
 ### Custom File Naming
 Set a custom name for downloaded files:
 ```bash
@@ -98,6 +107,12 @@ With episode numbering (extracts S##E## from URL or numbers sequentially):
 voe-dl -l links.txt --name "ShowName" --numbering
 ```
 This creates files like: `ShowName_S01E01.mp4`, `ShowName_S01E02.mp4`, etc.
+
+If you use `--numbering` without `--name`, it defaults to "Episode":
+```bash
+voe-dl -l links.txt --numbering
+```
+Creates: `Episode_S01E01.mp4`, `Episode_S01E02.mp4`, etc.
 
 ### Parallel Downloads
 Set the number of parallel workers (default is 4):
