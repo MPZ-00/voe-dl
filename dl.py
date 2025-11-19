@@ -215,62 +215,76 @@ def list_dl(doc, args):
     print("[*] Press Ctrl+C to abort all downloads")
 
     future_to_link = {}
+    executor = None
     
     try:
         # Execute parallel downloads
-        with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-            futures = []
-            for i, link in enumerate(lines, 1):
-                if _global_stop_event.is_set():
-                    break
-                    
-                episode = extract_episode_tag(link, i) if args.numbering else None
-                filename = generate_custom_filename(title, episode) if title and episode else None
-                thread_args = copy.deepcopy(args)
-                thread_args.name = filename if filename else args.name
-                future = executor.submit(download, link, thread_args, _global_stop_event)
-                futures.append(future)
-                future_to_link[future] = link
-
-            # Poll futures with timeout to allow KeyboardInterrupt
-            completed = set()
-            total = len(futures)
-            download_count = 0
-            
-            while len(completed) < total and not _global_stop_event.is_set():
-                # Use as_completed with very short timeout
-                done, not_done = concurrent.futures.wait(
-                    [f for f in futures if f not in completed],
-                    timeout=0.1,
-                    return_when=concurrent.futures.FIRST_COMPLETED
-                )
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=args.workers)
+        futures = []
+        for i, link in enumerate(lines, 1):
+            if _global_stop_event.is_set():
+                break
                 
-                # Process completed futures
-                for future in done:
-                    if future in completed:
-                        continue
-                    
-                    try:
-                        result = future.result(timeout=0)
-                        completed.add(future)
-                        download_count += 1
-                        print(f"[*] Download {download_count} / {total} completed successfully.")
-                        print(f"[*] Link: '{future_to_link[future]}'")
-                    except Exception as e:
-                        completed.add(future)
-                        download_count += 1
-                        print(f"[!] Error downloading file {download_count}: {e}")
-                        print(f"[!] Link: '{future_to_link[future]}'")
-                    
+            episode = extract_episode_tag(link, i) if args.numbering else None
+            filename = generate_custom_filename(title, episode) if title and episode else None
+            thread_args = copy.deepcopy(args)
+            thread_args.name = filename if filename else args.name
+            future = executor.submit(download, link, thread_args, _global_stop_event)
+            futures.append(future)
+            future_to_link[future] = link
+
+        # Poll futures with timeout to allow KeyboardInterrupt
+        completed = set()
+        total = len(futures)
+        download_count = 0
+        
+        while len(completed) < total and not _global_stop_event.is_set():
+            # Use as_completed with very short timeout
+            done, not_done = concurrent.futures.wait(
+                [f for f in futures if f not in completed],
+                timeout=0.1,
+                return_when=concurrent.futures.FIRST_COMPLETED
+            )
+            
+            # Process completed futures
+            for future in done:
+                if future in completed:
+                    continue
+                
+                try:
+                    result = future.result(timeout=0)
+                    completed.add(future)
+                    download_count += 1
+                    print(f"[*] Download {download_count} / {total} completed successfully.")
+                    print(f"[*] Link: '{future_to_link[future]}'")
+                except Exception as e:
+                    completed.add(future)
+                    download_count += 1
+                    print(f"[!] Error downloading file {download_count}: {e}")
+                    print(f"[!] Link: '{future_to_link[future]}'")
+        
+        # If abort was triggered, cancel all pending futures
+        if _global_stop_event.is_set():
+            print("[*] Cancelling pending downloads...")
+            for future in futures:
+                if future not in completed:
+                    future.cancel()
+                        
     except KeyboardInterrupt:
         print("\n[!] KeyboardInterrupt - Aborting all downloads...")
         _global_stop_event.set()
     finally:
-        # Wait for threads to stop
-        if _global_stop_event.is_set():
-            print("[*] Waiting for active downloads to stop...")
-            time.sleep(1)  # Give threads time to notice stop_event
-            print("[*] Abort complete.")
+        # Forcefully shutdown the executor
+        if executor:
+            if _global_stop_event.is_set():
+                print("[*] Shutting down executor...")
+                # Don't wait for running tasks to complete
+                executor.shutdown(wait=False, cancel_futures=True)
+                print("[*] Abort complete.")
+            else:
+                # Normal shutdown - wait for completion
+                executor.shutdown(wait=True)
+        
         # Always clean up .part files
         print("[*] Cleaning up temporary files...")
         delpartfiles()
