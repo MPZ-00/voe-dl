@@ -125,7 +125,7 @@ def deobfuscate_embedded_json(raw_json: str):
         return None
 
 def extract_episode_tag(url_or_line: str, index: int = 1) -> str:
-    match = re.search(r'(S\d{2}E\d{2})', url_or_line, re.IGNORECASE)
+    match = re.search(r'(S\d{1,2}E\d{1,2})', url_or_line, re.IGNORECASE)
     return match.group(1).upper() if match else f"S01E{index:02d}"
 
 def generate_custom_filename(base: str, episode_tag: str, ext: str = ".mp4") -> str:
@@ -272,7 +272,7 @@ def list_dl(doc, args):
                     continue
                 
                 try:
-                    result = future.result(timeout=0)
+                    future.result(timeout=0)
                     completed.add(future)
                     download_count += 1
                     print(f"[*] Download {download_count} / {total} completed successfully.")
@@ -977,14 +977,6 @@ def clean_base64(s):
     except (base64.binascii.Error, ValueError) as e:
         print(f"[!] Invalid base64 string: {e}")
         return None
-        
-def extract_episode_tag(url: str) -> str:
-    match = re.search(r'(S\d{1,2}E\d{1,2})', url, re.IGNORECASE)
-    return match.group(1) if match else None
-
-def generate_filename(base_name: str, episode_tag: str, ext=".mp4") -> str:
-    clean_name = re.sub(r'[\\/*?:"<>|]', "_", base_name)
-    return f"{clean_name}_{episode_tag}{ext}" if episode_tag else f"{clean_name}{ext}"
 
 if __name__ == "__main__":
     main()
