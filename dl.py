@@ -151,14 +151,14 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
+    
+    # Register signal handler once for the entire process
+    signal.signal(signal.SIGINT, signal_handler)
+    _global_stop_event.clear()
 
     if args.is_list:
         list_dl(args.target, args)
     else:
-        # Register signal handler for Ctrl+C
-        signal.signal(signal.SIGINT, signal_handler)
-        _global_stop_event.clear()
-        
         print("[*] Press Ctrl+C to abort download")
         try:
             download(args.target, args, _global_stop_event)
@@ -169,6 +169,10 @@ def main():
             if _global_stop_event.is_set():
                 time.sleep(0.5)
                 print("[*] Abort complete.")
+                
+                # Flush output streams to avoid interleaved output
+                sys.stdout.flush()
+                sys.stderr.flush()
                 
                 # Ask user what to do with partial downloads
                 print("\n[?] What would you like to do with partial downloads?")
@@ -212,12 +216,6 @@ def list_dl(doc, args):
     Lines starting with '#' and empty lines are ignored.
     Supports graceful abort with Ctrl+C.
     """
-    # Register signal handler for Ctrl+C
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    # Clear the global stop event
-    _global_stop_event.clear()
-    
     lines = []
     title = args.name
 
@@ -256,7 +254,8 @@ def list_dl(doc, args):
         # Poll futures with timeout to allow KeyboardInterrupt
         completed = set()
         total = len(futures)
-        download_count = 0
+        success_count = 0
+        failed_count = 0
         
         while len(completed) < total and not _global_stop_event.is_set():
             # Use as_completed with very short timeout
@@ -268,22 +267,19 @@ def list_dl(doc, args):
             
             # Process completed futures
             for future in done:
-                if future in completed:
-                    continue
-                
                 try:
                     future.result(timeout=0)
                     completed.add(future)
-                    download_count += 1
-                    print(f"[*] Download {download_count} / {total} completed successfully.")
+                    success_count += 1
+                    print(f"[*] Download {success_count} / {total} completed successfully.")
                     print(f"[*] Link: '{future_to_link[future]}'")
                 except concurrent.futures.CancelledError:
                     # Future was cancelled due to abort - this is expected
                     completed.add(future)
                 except Exception as e:
                     completed.add(future)
-                    download_count += 1
-                    print(f"[!] Error downloading file {download_count}: {e}")
+                    failed_count += 1
+                    print(f"[!] Error downloading file (failed {failed_count}): {e}")
                     print(f"[!] Link: '{future_to_link[future]}'")
         
         # If abort was triggered, cancel all pending futures
@@ -309,6 +305,10 @@ def list_dl(doc, args):
                 # Then shutdown without waiting for stragglers
                 executor.shutdown(wait=False, cancel_futures=True)
                 print("[*] Abort complete.")
+                
+                # Flush output streams to avoid interleaved output from threads
+                sys.stdout.flush()
+                sys.stderr.flush()
                 
                 # Ask user what to do with partial downloads
                 print("\n[?] What would you like to do with partial downloads?")
