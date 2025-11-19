@@ -28,6 +28,12 @@ All notable changes to this project will be documented in this file.
 - Fixed `CancelledError` tracebacks by catching them silently
 - Thread-safe operations by using `copy.deepcopy()` for argument objects
 
+## [v1.7.4] - Dependency Cleanup
+**Release Date**: 2025-06-15
+
+### Removed
+- Removed unnecessary `base64` package from `requirements.txt` (native Python module), thanks to @hyperlexus
+
 ---
 
 ## [v1.7.3] - Documentation Updates
