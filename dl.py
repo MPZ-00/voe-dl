@@ -169,8 +169,28 @@ def main():
             if _global_stop_event.is_set():
                 time.sleep(0.5)
                 print("[*] Abort complete.")
-            print("[*] Cleaning up temporary files...")
-            delpartfiles()
+                
+                # Ask user what to do with partial downloads
+                print("\n[?] What would you like to do with partial downloads?")
+                print("  [K]eep - Keep .part files to resume later")
+                print("  [D]elete - Remove all .part files and start fresh next time")
+                
+                try:
+                    choice = input("Your choice (K/D): ").strip().upper()
+                    if choice == 'D':
+                        print("[*] Cleaning up temporary files...")
+                        delpartfiles()
+                        print("[*] All .part files removed.")
+                    elif choice == 'K':
+                        print("[*] Keeping .part files for resume.")
+                    else:
+                        print("[*] Invalid choice, keeping .part files by default.")
+                except (EOFError, KeyboardInterrupt):
+                    print("\n[*] Keeping .part files by default.")
+            else:
+                # Normal completion - clean up
+                print("[*] Cleaning up temporary files...")
+                delpartfiles()
 
 def get_version_history():
     return (
@@ -289,13 +309,30 @@ def list_dl(doc, args):
                 # Then shutdown without waiting for stragglers
                 executor.shutdown(wait=False, cancel_futures=True)
                 print("[*] Abort complete.")
+                
+                # Ask user what to do with partial downloads
+                print("\n[?] What would you like to do with partial downloads?")
+                print("  [K]eep - Keep .part files to resume later")
+                print("  [D]elete - Remove all .part files and start fresh next time")
+                
+                try:
+                    choice = input("Your choice (K/D): ").strip().upper()
+                    if choice == 'D':
+                        print("[*] Cleaning up temporary files...")
+                        delpartfiles()
+                        print("[*] All .part files removed.")
+                    elif choice == 'K':
+                        print("[*] Keeping .part files for resume.")
+                    else:
+                        print("[*] Invalid choice, keeping .part files by default.")
+                except (EOFError, KeyboardInterrupt):
+                    print("\n[*] Keeping .part files by default.")
             else:
                 # Normal shutdown - wait for completion
                 executor.shutdown(wait=True)
-        
-        # Always clean up .part files
-        print("[*] Cleaning up temporary files...")
-        delpartfiles()
+                # Clean up after successful completion
+                print("[*] Cleaning up temporary files...")
+                delpartfiles()
 
 
 def download(url, args, stop_event=None):
