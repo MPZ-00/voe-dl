@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
 import base64
 import concurrent.futures
+import threading
 import random
 import time
 import argparse
@@ -144,7 +145,18 @@ def main():
     if args.is_list:
         list_dl(args.target, args)
     else:
-        download(args.target, args)
+        print("[*] Press Ctrl+C to abort download")
+        stop_event = threading.Event()
+        try:
+            download(args.target, args, stop_event)
+        except KeyboardInterrupt:
+            print("\n[!] Ctrl+C detected - Aborting download...")
+            stop_event.set()
+            time.sleep(0.5)
+            print("[*] Abort complete.")
+        finally:
+            print("[*] Cleaning up temporary files...")
+            delpartfiles()
 
 def get_version_history():
     return (
@@ -164,6 +176,7 @@ def list_dl(doc, args):
     """
     Reads lines from the specified doc file and downloads them in parallel.
     Lines starting with '#' and empty lines are ignored.
+    Supports graceful abort with Ctrl+C.
     """
     lines = []
     title = args.name
@@ -179,53 +192,120 @@ def list_dl(doc, args):
             lines.append(line)
 
     print(f"Downloading {len(lines)} files in parallel with {args.workers} threads...")
+    print("[*] Press Ctrl+C to abort all downloads")
 
+    # Create stop event for graceful shutdown
+    stop_event = threading.Event()
     future_to_link = {}
-    # Execute parallel downloads with up to 4 threads
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-        futures = []
-        for i, link in enumerate(lines, 1):
-            episode = extract_episode_tag(link, i) if args.numbering else None
-            filename = generate_custom_filename(title, episode) if title and episode else None
-            thread_args = copy.deepcopy(args)
-            thread_args.name = filename if filename else args.name
-            future = executor.submit(download, link, thread_args)
-            futures.append(future)
-            future_to_link[future] = link
+    
+    try:
+        # Execute parallel downloads
+        with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+            futures = []
+            for i, link in enumerate(lines, 1):
+                episode = extract_episode_tag(link, i) if args.numbering else None
+                filename = generate_custom_filename(title, episode) if title and episode else None
+                thread_args = copy.deepcopy(args)
+                thread_args.name = filename if filename else args.name
+                future = executor.submit(download, link, thread_args, stop_event)
+                futures.append(future)
+                future_to_link[future] = link
 
-        for i, future in enumerate(concurrent.futures.as_completed(futures), start=1):
-            try:
-                future.result()
-                print(f"[*] Download {i} / {len(lines)} completed successfully.")
-                print(f"[*] Link: '{future_to_link[future]}'")
-            except Exception as e:
-                print(f"[!] Error downloading file {i}: {e}")
+            # Poll futures with timeout to allow KeyboardInterrupt
+            completed = set()
+            total = len(futures)
+            download_count = 0
+            
+            while len(completed) < total:
+                # Check for completed futures with short timeout
+                for future in futures:
+                    if future in completed:
+                        continue
+                    
+                    try:
+                        # Use short timeout to make Ctrl+C responsive
+                        result = future.result(timeout=0.1)
+                        completed.add(future)
+                        download_count += 1
+                        print(f"[*] Download {download_count} / {total} completed successfully.")
+                        print(f"[*] Link: '{future_to_link[future]}'")
+                    except concurrent.futures.TimeoutError:
+                        # Future not ready yet, continue polling
+                        continue
+                    except Exception as e:
+                        completed.add(future)
+                        download_count += 1
+                        print(f"[!] Error downloading file {download_count}: {e}")
+                        print(f"[!] Link: '{future_to_link[future]}'")
+                
+                # Small sleep to prevent CPU spinning
+                if len(completed) < total:
+                    time.sleep(0.05)
+                    
+    except KeyboardInterrupt:
+        print("\n[!] Ctrl+C detected - Aborting all downloads...")
+        stop_event.set()
+        print("[*] Waiting for active downloads to stop...")
+        time.sleep(1)  # Give threads time to notice stop_event
+        print("[*] Abort complete.")
+    finally:
+        # Always clean up .part files
+        print("[*] Cleaning up temporary files...")
+        delpartfiles()
 
-    # Remove .part files after all downloads are complete
-    delpartfiles()
 
-
-def download(url, args):
+def download(url, args, stop_event=None):
+    """
+    Download a video from the given URL.
+    
+    Args:
+        url: The URL to download from
+        args: Parsed command line arguments
+        stop_event: Optional threading.Event() to signal abort
+    """
+    # Check if abort was requested before starting
+    if stop_event and stop_event.is_set():
+        print(f"[!] Download aborted before starting: {url}")
+        return
+    
     URL = str(url)
-    custom_name = args.name if args.name else None
-    dry_run = args.dry_run if args.dry_run else False
+    custom_name = args.name if hasattr(args, 'name') else None
+    dry_run = args.dry_run if hasattr(args, 'dry_run') else False
 
     # Add a small random delay to mimic human behavior
-    time.sleep(random.uniform(1, 3))
+    for _ in range(10):  # Split sleep into smaller chunks for responsiveness
+        if stop_event and stop_event.is_set():
+            print(f"[!] Download aborted during initial delay: {url}")
+            return
+        time.sleep(random.uniform(0.1, 0.3))
 
     # Get browser-like headers
     headers = get_browser_headers(URL)
 
     try:
+        # Check abort before making request
+        if stop_event and stop_event.is_set():
+            print(f"[!] Download aborted: {url}")
+            return
+            
         # Use the session for persistent cookies
         html_page = session.get(URL, headers=headers, timeout=30)
         html_page.raise_for_status()  # Raise exception for 4XX/5XX responses
+
+        # Check abort after request
+        if stop_event and stop_event.is_set():
+            print(f"[!] Download aborted after page fetch: {url}")
+            return
 
         # Handle cloudflare or other protection
         if html_page.status_code == 403 or "captcha" in html_page.text.lower():
             print(f"[!] Access denied or captcha detected for {URL}. Trying with different headers...")
             # Try again with different headers after a delay
-            time.sleep(random.uniform(3, 5))
+            for _ in range(10):
+                if stop_event and stop_event.is_set():
+                    print(f"[!] Download aborted during retry delay: {url}")
+                    return
+                time.sleep(random.uniform(0.3, 0.5))
             headers = get_browser_headers(URL)
             headers["User-Agent"] = random.choice(USER_AGENTS)  # Force different UA
             html_page = session.get(URL, headers=headers, timeout=30)
@@ -649,18 +729,30 @@ def download(url, args):
                     ext = ".mp4"
                 name = f"{basename}_SS{ext}" if not custom_name else f"{custom_name}{ext}"
 
+                # Check for abort before starting download
+                if stop_event and stop_event.is_set():
+                    print(f"[!] Download aborted before starting MP4 download: {URL}")
+                    return
+
                 print(f"[*] Downloading MP4 stream: {link}")
-                ydl_opts = {
-                    'outtmpl': name,
-                    'quiet': False,
-                    'no_warnings': False,
-                    'http_headers': headers
-                }
-                with YoutubeDL(ydl_opts) as ydl:
-                    try:
-                        ydl.download([link])
-                    except Exception as e:
-                        print(f"[!] YoutubeDL error: {e}")
+                if dry_run:
+                    print(f"[Dry Run] Would download: {link} to {name}")
+                else:
+                    ydl_opts = {
+                        'outtmpl': name,
+                        'quiet': False,
+                        'no_warnings': False,
+                        'http_headers': headers
+                    }
+                    with YoutubeDL(ydl_opts) as ydl:
+                        try:
+                            ydl.download([link])
+                        except Exception as e:
+                            # Check if it was aborted
+                            if stop_event and stop_event.is_set():
+                                print(f"[!] Download aborted during MP4 download: {URL}")
+                                return
+                            print(f"[!] YoutubeDL error: {e}")
             elif "hls" in source_json:
                 link = source_json["hls"]
                 # Check if the link is base64 encoded
@@ -680,21 +772,30 @@ def download(url, args):
                     ext = ".mp4"  # HLS streams are typically downloaded as MP4
                 name = f"{basename}_SS{ext}" if not custom_name else f"{custom_name}{ext}"
 
+                # Check for abort before starting download
+                if stop_event and stop_event.is_set():
+                    print(f"[!] Download aborted before starting HLS download: {URL}")
+                    return
+
                 print(f"[*] Downloading HLS stream: {link}")
-                ydl_opts = {
-                    'outtmpl': name,
-                    'quiet': False,
-                    'no_warnings': False,
-                    'http_headers': headers
-                }
-                with YoutubeDL(ydl_opts) as ydl:
-                    try:
-                        if not dry_run:
+                if dry_run:
+                    print(f"[Dry Run] Would download: {link} to {name}")
+                else:
+                    ydl_opts = {
+                        'outtmpl': name,
+                        'quiet': False,
+                        'no_warnings': False,
+                        'http_headers': headers
+                    }
+                    with YoutubeDL(ydl_opts) as ydl:
+                        try:
                             ydl.download([link])
-                        else:
-                            print(f"[Dry Run] Would download: {link} to {name}")
-                    except Exception as e:
-                        print(f"[!] YoutubeDL error: {e}")
+                        except Exception as e:
+                            # Check if it was aborted
+                            if stop_event and stop_event.is_set():
+                                print(f"[!] Download aborted during HLS download: {URL}")
+                                return
+                            print(f"[!] YoutubeDL error: {e}")
             else:
                 print("[!] Could not find downloadable URL. The site might have changed.")
                 print(f"Available keys in source_json: {list(source_json.keys())}")
