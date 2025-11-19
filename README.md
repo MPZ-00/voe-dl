@@ -87,12 +87,34 @@ Run:
 voe-dl -l links.txt
 ```
 
-### Optional: Parallel Downloads
-You can add the `-w` option to set number of parallel workers:
+### Custom File Naming
+Set a custom name for downloaded files:
+```bash
+voe-dl -u https://voe.sx/yourvideo --name "MyVideo"
+```
+
+With episode numbering (extracts S##E## from URL or numbers sequentially):
+```bash
+voe-dl -l links.txt --name "ShowName" --numbering
+```
+This creates files like: `ShowName_S01E01.mp4`, `ShowName_S01E02.mp4`, etc.
+
+### Parallel Downloads
+Set the number of parallel workers (default is 4):
 ```bash
 voe-dl -l links.txt -w 8
 ```
-(Default is 4)
+
+### Dry Run Mode
+Test the download process without actually downloading:
+```bash
+voe-dl -l links.txt --dry-run
+```
+
+### Aborting Downloads
+Press `Ctrl+C` to gracefully abort downloads. You'll be prompted to either:
+- **Keep** `.part` files to resume later
+- **Delete** `.part` files to start fresh next time
 
 ---
 
@@ -128,7 +150,17 @@ Run:
 ```bash
 voe-dl -h
 ```
-This will print all available options, arguments, and descriptions.
+This will print all available options:
+
+```
+-h, --help              Show help message and exit
+-u, --url               Download single video from URL
+-l, --list              Download videos from a text file (one URL per line)
+-w, --workers           Number of parallel download threads (default: 4)
+--name                  Custom filename for downloaded videos
+--numbering             Enable episode numbering (S##E## format)
+--dry-run               Test download process without actually downloading
+```
 
 ---
 
