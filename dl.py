@@ -281,7 +281,12 @@ def list_dl(doc, args):
         if executor:
             if _global_stop_event.is_set():
                 print("[*] Shutting down executor...")
-                # Don't wait for running tasks to complete
+                # Cancel pending futures first
+                for future in futures:
+                    future.cancel()
+                # Wait a moment for running threads to notice stop_event
+                time.sleep(2)
+                # Then shutdown without waiting for stragglers
                 executor.shutdown(wait=False, cancel_futures=True)
                 print("[*] Abort complete.")
             else:
@@ -777,11 +782,17 @@ def download(url, args, stop_event=None):
                 if dry_run:
                     print(f"[Dry Run] Would download: {link} to {name}")
                 else:
+                    # Progress hook to check for abort
+                    def progress_hook(d):
+                        if stop_event and stop_event.is_set():
+                            raise Exception("Download aborted by user")
+                    
                     ydl_opts = {
                         'outtmpl': name,
                         'quiet': False,
                         'no_warnings': False,
-                        'http_headers': headers
+                        'http_headers': headers,
+                        'progress_hooks': [progress_hook],
                     }
                     with YoutubeDL(ydl_opts) as ydl:
                         try:
@@ -820,11 +831,17 @@ def download(url, args, stop_event=None):
                 if dry_run:
                     print(f"[Dry Run] Would download: {link} to {name}")
                 else:
+                    # Progress hook to check for abort
+                    def progress_hook(d):
+                        if stop_event and stop_event.is_set():
+                            raise Exception("Download aborted by user")
+                    
                     ydl_opts = {
                         'outtmpl': name,
                         'quiet': False,
                         'no_warnings': False,
-                        'http_headers': headers
+                        'http_headers': headers,
+                        'progress_hooks': [progress_hook],
                     }
                     with YoutubeDL(ydl_opts) as ydl:
                         try:
