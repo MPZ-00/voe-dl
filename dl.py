@@ -257,6 +257,9 @@ def list_dl(doc, args):
                     download_count += 1
                     print(f"[*] Download {download_count} / {total} completed successfully.")
                     print(f"[*] Link: '{future_to_link[future]}'")
+                except concurrent.futures.CancelledError:
+                    # Future was cancelled due to abort - this is expected
+                    completed.add(future)
                 except Exception as e:
                     completed.add(future)
                     download_count += 1
