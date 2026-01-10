@@ -122,6 +122,8 @@ def deobfuscate_embedded_json(raw_json: str):
         return None
 
 def main():
+    global PROXY_URL
+    
     args = sys.argv  # saving the cli arguments into args
 
     # checks if there is at least one argument
@@ -838,6 +840,7 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
 
 
