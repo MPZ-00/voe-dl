@@ -1,4 +1,4 @@
-requests[socks]
+requests
 beautifulsoup4
 yt-dlp
 wget
