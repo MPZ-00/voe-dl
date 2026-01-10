@@ -761,7 +761,7 @@ def download_file(url, filename, referer_url=None):
             r.raise_for_status()
             total_size = int(r.headers.get('content-length', 0))
 
-            with open(filename, 'wb') as f:
+            with open(os.path.join(OUTPUT_DIR, filename), 'wb') as f:
                 if total_size == 0:
                     print("[!] Unknown file size. Downloading...")
                     f.write(r.content)
@@ -826,5 +826,6 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
 
