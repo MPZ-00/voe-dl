@@ -143,22 +143,22 @@ def main():
             break
         elif args[i] == "-u":   #if the user argument is "-u" call the download function
             url = args[i+1]
-            i++ # make it move on two arguments
+            i += 1 # make it move on two arguments
         elif args[i] == "-l":   #if the user argument is "-l" call the list_dl (list download) function
             doc = args[i+1]
-            i++ # make it move on two arguments
+            i += 1 # make it move on two arguments
         elif args[i] == "-w":   #if the user argument is "-w" set the max_workers
             workers = int(args[i+1])
-            i++ # make it move on two arguments
+            i += 1 # make it move on two arguments
         elif args[i] == "-p": # if the user argument is "-p" set the proxy
             proxy_url = args[i+1]
-            i++ # make it move on two arguments
+            i += 1 # make it move on two arguments
         elif i == len(args)-1:
             url = args[i] # define as url
         else:
             print("Unknown argument \""+args[i]+"\". Use -h for Help") # tell the user about the invalid parameter
             quit()
-        i++ # move on to the next argument
+        i += 1 # move on to the next argument
 
     # assign proxy. For now only http and https is supported
     if proxy_url != "":
@@ -833,5 +833,6 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
 
