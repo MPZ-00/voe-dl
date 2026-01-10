@@ -133,29 +133,47 @@ def main():
     workers = int(4)
     doc = ""
     url = ""
+    proxy_url = ""
 
     # iterate through arguments
     i = 1 # start id is 1 because 0 is the script name
     while i < len(args) {
-        if args[i] == "-h":     #if the current user argument is "-h" call the help function
+        if args[i] == "-h":     #if the user argument is "-h" call the help function
             help()
             break
-        elif args[i] == "-u":   #if the first user argument is "-u" call the download function
+        elif args[i] == "-u":   #if the user argument is "-u" call the download function
             url = args[i+1]
             i++ # make it move on two arguments
-        elif args[i] == "-l":   #if the first user argument is "-l" call the list_dl (list download) function
+        elif args[i] == "-l":   #if the user argument is "-l" call the list_dl (list download) function
             doc = args[i+1]
             i++ # make it move on two arguments
-        elif args[i] == "-w":   #if the second user argument is "-w" set the max_workers to the value of the third argument
+        elif args[i] == "-w":   #if the user argument is "-w" set the max_workers
             workers = int(args[i+1])
+            i++ # make it move on two arguments
+        elif args[i] == "-p": # if the user argument is "-p" set the proxy
+            proxy_url = args[i+1]
             i++ # make it move on two arguments
         elif i == len(args)-1:
             url = args[i] # define as url
         else:
-            print("Unknown parameter "+args[i]+". Use -h for Help") # if not, tells the user to specify an argument
+            print("Unknown argument \""+args[i]+"\". Use -h for Help") # tell the user about the invalid parameter
             quit()
         i++ # move on to the next argument
     }
+
+    # assign proxy. For now only http and https is supported
+    if proxy_url != "":
+        if proxy_url.startswith("http://"):
+            session.proxies = {
+                "http": proxy_url,
+            }
+        elif proxy_rul.startswith("https://"):
+            session.proxies = {
+                "https": proxy_url,
+            }
+        else:
+            print("Proxy url is invalid. Use -h for Help") # advise the user that the proxy url is invalid
+            quit()
 
     if doc != "": # if doc is defined -l was specified so a download will not be started
         list_dl(doc, workers)
@@ -164,7 +182,7 @@ def main():
             print("No download url specified. Use -h for Help")
             quit()
         else:
-            download(URL)
+            download(url)
 
 def help():
     print("Version History:")
@@ -182,6 +200,7 @@ def help():
     print("-u <URL> downloads the <URL> you specify")
     print("-l <doc> opens the <doc> you specify and downloads every URL line after line")
     print("-w <number> sets the number of parallel workers for list downloads (default: 4)")
+    print("-p <url> set the proxy url. At the moment only http and https proxies are allowed (default: nothing aka. disabled)")
     print("<URL> just the URL as Argument works the same as with -u Argument")
     print("______________")
     print("")
@@ -815,3 +834,4 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
