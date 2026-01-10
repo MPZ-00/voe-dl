@@ -781,7 +781,7 @@ def download_file(url, filename, referer_url=None):
         print(f"[!] Error downloading file: {e}")
         # Fall back to wget if our method fails
         print("[*] Falling back to wget...")
-        wget.download(url, out=filename)
+        wget.download(url, out=os.path.join(OUTPUT_DIR, filename))
 
 def delpartfiles():
     path = os.getcwd()
@@ -826,6 +826,7 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
 
 
