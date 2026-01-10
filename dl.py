@@ -705,8 +705,8 @@ def download(URL):
                     'outtmpl': name,
                     'quiet': False,
                     'no_warnings': False,
-                    'http_headers': headers
-                    'proxy': PROXY_URL
+                    'http_headers': headers,
+                    'proxy': PROXY_URL,
                 }
                 with YoutubeDL(ydl_opts) as ydl:
                     try:
@@ -743,8 +743,8 @@ def download(URL):
                     'outtmpl': name,
                     'quiet': False,
                     'no_warnings': False,
-                    'http_headers': headers
-                    'proxy': PROXY_URL
+                    'http_headers': headers,
+                    'proxy': PROXY_URL,
                 }
                 with YoutubeDL(ydl_opts) as ydl:
                     try:
@@ -843,6 +843,7 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
 
 
