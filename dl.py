@@ -199,7 +199,7 @@ def help():
     print("-u <URL> downloads the <URL> you specify")
     print("-l <doc> opens the <doc> you specify and downloads every URL line after line")
     print("-w <number> sets the number of parallel workers for list downloads (default: 4)")
-    print("-p <url> set the proxy url. At the moment only http and https proxies are allowed (default: nothing aka. disabled)")
+    print("-p <URL> set the proxy url. At the moment only http and https proxies are allowed (default: nothing aka. disabled)")
     print("<URL> just the URL as Argument works the same as with -u Argument")
     print("______________")
     print("")
@@ -833,6 +833,7 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
 
 
