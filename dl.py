@@ -124,29 +124,47 @@ def deobfuscate_embedded_json(raw_json: str):
 def main():
     args = sys.argv  # saving the cli arguments into args
 
-    try:
-        args[1]     #try if args has a value at index 1
-    except IndexError:
+    # checks if there is at least one argument
+    if len(args) < 2:
         print("Please use a parameter. Use -h for Help") #if not, tells the user to specify an argument
         quit()
 
-    if args[1] == "-h":     #if the first user argument is "-h" call the help function
-        help()
-    elif args[1] == "-u":   #if the first user argument is "-u" call the download function
-        URL = args[2]
-        download(URL)
-    elif args[1] == "-l":   #if the first user argument is "-l" call the list_dl (list download) function
-        doc = args[2]
-        
-        if len(args) > 3 and args[3] == "-w":   #if the second user argument is "-w" set the max_workers to the value of the third argument
-            workers = int(args[4])
+    # possible config options with their default
+    workers = int(4)
+    doc = ""
+    url = ""
+
+    # iterate through arguments
+    i = 1 # start id is 1 because 0 is the script name
+    while i < len(args) {
+        if args[i] == "-h":     #if the current user argument is "-h" call the help function
+            help()
+            break
+        elif args[i] == "-u":   #if the first user argument is "-u" call the download function
+            url = args[i+1]
+            i++ # make it move on two arguments
+        elif args[i] == "-l":   #if the first user argument is "-l" call the list_dl (list download) function
+            doc = args[i+1]
+            i++ # make it move on two arguments
+        elif args[i] == "-w":   #if the second user argument is "-w" set the max_workers to the value of the third argument
+            workers = int(args[i+1])
+            i++ # make it move on two arguments
+        elif i == len(args)-1:
+            url = args[i] # define as url
         else:
-            workers = 4
-            
+            print("Unknown parameter "+args[i]+". Use -h for Help") # if not, tells the user to specify an argument
+            quit()
+        i++ # move on to the next argument
+    }
+
+    if doc != "": # if doc is defined -l was specified so a download will not be started
         list_dl(doc, workers)
-    else:
-        URL = args[1]       #if the first user argument is the <URL> call the download function
-        download(URL)
+    else: # by default try starting to download
+        if url == "":
+            print("No download url specified. Use -h for Help")
+            quit()
+        else:
+            download(URL)
 
 def help():
     print("Version History:")
@@ -795,4 +813,5 @@ def clean_base64(s):
         return None
         
 if __name__ == "__main__":
+
     main()
