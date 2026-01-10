@@ -137,7 +137,7 @@ def main():
 
     # iterate through arguments
     i = 1 # start id is 1 because 0 is the script name
-    while i < len(args) {
+    while i < len(args):
         if args[i] == "-h":     #if the user argument is "-h" call the help function
             help()
             break
@@ -159,7 +159,6 @@ def main():
             print("Unknown argument \""+args[i]+"\". Use -h for Help") # tell the user about the invalid parameter
             quit()
         i++ # move on to the next argument
-    }
 
     # assign proxy. For now only http and https is supported
     if proxy_url != "":
@@ -834,4 +833,5 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
