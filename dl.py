@@ -33,7 +33,7 @@ USER_AGENTS = [
 
 # Create a session that persists across requests
 session = requests.Session()
-
+PROXY_URL = ""
 
 def get_browser_headers(url=None):
     """Generate realistic browser headers with optional referer based on URL"""
@@ -162,6 +162,9 @@ def main():
 
     # assign proxy to requests session
     if proxy_url != "":
+        PROXY_URL = proxy_url # set proxy_url for yt_dlp
+
+        # set proxy_url for the requests session
         if proxy_url.startswith("http://"):
             session.proxies = {
                 "http": proxy_url,
@@ -703,6 +706,7 @@ def download(URL):
                     'quiet': False,
                     'no_warnings': False,
                     'http_headers': headers
+                    'proxy': PROXY_URL
                 }
                 with YoutubeDL(ydl_opts) as ydl:
                     try:
@@ -740,6 +744,7 @@ def download(URL):
                     'quiet': False,
                     'no_warnings': False,
                     'http_headers': headers
+                    'proxy': PROXY_URL
                 }
                 with YoutubeDL(ydl_opts) as ydl:
                     try:
@@ -838,6 +843,7 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
 
 
