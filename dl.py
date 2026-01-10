@@ -163,11 +163,12 @@ def main():
             quit()
         i += 1 # move on to the next argument
 
-    if os.path.isdir(outdir): # validate output dir
-        OUTPUT_DIR = outdir # write output dir
-    else:
-        print("The output directory \""+outdir+"\" is not a valid folder.") # tell the user about the invalid output directory
-        quit()
+    if outdir != "":
+        if os.path.isdir(outdir): # validate output dir
+            OUTPUT_DIR = outdir # write output dir
+        else:
+            print("The output directory \""+outdir+"\" is not a valid folder.") # tell the user about the invalid output directory
+            quit()
 
     if doc != "": # if doc is defined -l was specified so a download will not be started
         list_dl(doc, workers)
@@ -828,6 +829,7 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
 
 
