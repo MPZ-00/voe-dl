@@ -33,7 +33,7 @@ USER_AGENTS = [
 
 # Create a session that persists across requests
 session = requests.Session()
-
+OUTPUT_DIR = "."
 
 def get_browser_headers(url=None):
     """Generate realistic browser headers with optional referer based on URL"""
@@ -134,6 +134,7 @@ def main():
     doc = ""
     url = ""
     proxy_url = ""
+    dir = "" # do not define the default here! define it at OUTPUT_DIR a few lines up
 
     # iterate through arguments
     i = 1 # start id is 1 because 0 is the script name
@@ -150,8 +151,8 @@ def main():
         elif args[i] == "-w":   #if the user argument is "-w" set the max_workers
             workers = int(args[i+1])
             i += 1 # make it move on two arguments
-        elif args[i] == "-p": # if the user argument is "-p" set the proxy
-            proxy_url = args[i+1]
+        elif args[i] == "-d": # if the user argument is "-d" set the target_directory
+            dir = args[i+1]
             i += 1 # make it move on two arguments
         elif i == len(args)-1:
             url = args[i] # define as url
@@ -160,22 +161,8 @@ def main():
             quit()
         i += 1 # move on to the next argument
 
-    # assign proxy to requests session
-    if proxy_url != "":
-        PROXY_URL = proxy_url # set proxy_url for yt_dlp
-
-        # set proxy_url for the requests session
-        if proxy_url.startswith("http://"):
-            session.proxies = {
-                "http": proxy_url,
-            }
-        elif proxy_url.startswith("https://"):
-            session.proxies = {
-                "https": proxy_url,
-            }
-        else:
-            print("Proxy url is invalid. Use -h for Help") # advise the user that the proxy url is invalid
-            quit()
+    if os.path.isdir(dir): # validate output dir
+        OUTPUT_DIR = dir # write output dir
 
     if doc != "": # if doc is defined -l was specified so a download will not be started
         list_dl(doc, workers)
@@ -201,6 +188,7 @@ def help():
     print("-h shows this help")
     print("-u <URL> downloads the <URL> you specify")
     print("-l <doc> opens the <doc> you specify and downloads every URL line after line")
+    print("-d <path> specifies the output dir for the downloaded file/s")
     print("-w <number> sets the number of parallel workers for list downloads (default: 4)")
     print("<URL> just the URL as Argument works the same as with -u Argument")
     print("______________")
@@ -696,7 +684,7 @@ def download(URL):
 
                 print(f"[*] Downloading MP4 stream: {link}")
                 ydl_opts = {
-                    'outtmpl': name,
+                    'outtmpl': os.path.join(OUTPUT_DIR, name),
                     'quiet': False,
                     'no_warnings': False,
                     'http_headers': headers
@@ -733,7 +721,7 @@ def download(URL):
 
                 print(f"[*] Downloading HLS stream: {link}")
                 ydl_opts = {
-                    'outtmpl': name,
+                    'outtmpl': os.path.join(OUTPUT_DIR, name),
                     'quiet': False,
                     'no_warnings': False,
                     'http_headers': headers
@@ -835,3 +823,4 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
