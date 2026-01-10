@@ -173,11 +173,6 @@ def main():
             session.proxies = {
                 "https": proxy_url,
             }
-        elif proxy_url.startswith("socks5://") or proxy_url.startswith("socks4://"):
-            session.proxies = {
-                "http": proxy_url,
-                "https": proxy_url,
-            }
         else:
             print("Proxy url is invalid. Use -h for Help") # advise the user that the proxy url is invalid
             quit()
@@ -207,7 +202,7 @@ def help():
     print("-u <URL> downloads the <URL> you specify")
     print("-l <doc> opens the <doc> you specify and downloads every URL line after line")
     print("-w <number> sets the number of parallel workers for list downloads (default: 4)")
-    print("-p <URL> set the proxy url. the url has to start with one of the following: http://, https://, socks4:// or socks5:// (default: nothing aka. disabled)")
+    print("-p <URL> set the proxy url. the url has to start with one of the following: http://, https:// (default: nothing aka. disabled)")
     print("<URL> just the URL as Argument works the same as with -u Argument")
     print("______________")
     print("")
@@ -843,6 +838,7 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
 
 
