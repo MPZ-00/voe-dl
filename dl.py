@@ -134,7 +134,7 @@ def main():
     doc = ""
     url = ""
     proxy_url = ""
-    dir = "" # do not define the default here! define it at OUTPUT_DIR a few lines up
+    outdir = "" # do not define the default here! define it at OUTPUT_DIR a few lines up
 
     # iterate through arguments
     i = 1 # start id is 1 because 0 is the script name
@@ -152,7 +152,7 @@ def main():
             workers = int(args[i+1])
             i += 1 # make it move on two arguments
         elif args[i] == "-d": # if the user argument is "-d" set the target_directory
-            dir = args[i+1]
+            outdir = args[i+1]
             i += 1 # make it move on two arguments
         elif i == len(args)-1:
             url = args[i] # define as url
@@ -161,8 +161,11 @@ def main():
             quit()
         i += 1 # move on to the next argument
 
-    if os.path.isdir(dir): # validate output dir
-        OUTPUT_DIR = dir # write output dir
+    if os.path.isdir(outdir): # validate output dir
+        OUTPUT_DIR = outdir # write output dir
+    else:
+        print("The output directory \""+outdir+"\" is not a valid folder.") # tell the user about the invalid output directory
+        quit()
 
     if doc != "": # if doc is defined -l was specified so a download will not be started
         list_dl(doc, workers)
@@ -823,4 +826,5 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
 
