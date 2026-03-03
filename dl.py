@@ -416,7 +416,7 @@ def download(url, args, stop_event=None):
                         if i1 > i0:
                             url = script.string[i0 + L:i1]
                             print(f"[*] Detected redirect to: {url}")
-                            return download(url)
+                            return download(url, args)
 
         # Try multiple methods to find the title
         name = None
@@ -767,7 +767,7 @@ def download(url, args, stop_event=None):
                                 "/") else base_url + "/" + iframe_src
 
                         print(f"[*] Found iframe, following to: {iframe_src}")
-                        return download(iframe_src)
+                        return download(iframe_src, args)
 
         if not source_json:
             print("[!] Could not find sources in the page. The site structure might have changed.")
