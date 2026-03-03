@@ -14,7 +14,7 @@ import signal
 import random
 import time
 import argparse
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 # List of common user agents for rotation
 USER_AGENTS = [
@@ -332,7 +332,7 @@ def list_dl(doc, args):
                 delpartfiles()
 
 
-def download(url, args, stop_event=None):
+def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
     """
     Download a video from the given URL.
     
@@ -347,6 +347,15 @@ def download(url, args, stop_event=None):
         return
     
     URL = str(url)
+    if visited_urls is None:
+        visited_urls = set()
+    if URL in visited_urls:
+        print(f"[!] Redirect loop detected, already visited: {URL}")
+        return
+    if redirect_depth > 10:
+        print(f"[!] Too many redirects while resolving: {URL}")
+        return
+    visited_urls.add(URL)
     custom_name = args.name if hasattr(args, 'name') else None
     dry_run = args.dry_run if hasattr(args, 'dry_run') else False
 
@@ -414,9 +423,10 @@ def download(url, args, stop_event=None):
                         closing_quote = "'" if pattern.endswith("'") else "\""
                         i1 = script.string.find(closing_quote, i0 + L)
                         if i1 > i0:
-                            url = script.string[i0 + L:i1]
-                            print(f"[*] Detected redirect to: {url}")
-                            return download(url, args, stop_event)
+                            redirect_url = script.string[i0 + L:i1].strip()
+                            redirect_url = urljoin(URL, redirect_url)
+                            print(f"[*] Detected redirect to: {redirect_url}")
+                            return download(redirect_url, args, stop_event, visited_urls, redirect_depth + 1)
 
         # Try multiple methods to find the title
         name = None
@@ -766,8 +776,9 @@ def download(url, args, stop_event=None):
                             iframe_src = base_url + iframe_src if iframe_src.startswith(
                                 "/") else base_url + "/" + iframe_src
 
+                        iframe_src = urljoin(URL, iframe_src)
                         print(f"[*] Found iframe, following to: {iframe_src}")
-                        return download(iframe_src, args, stop_event)
+                        return download(iframe_src, args, stop_event, visited_urls, redirect_depth + 1)
 
         if not source_json:
             print("[!] Could not find sources in the page. The site structure might have changed.")
