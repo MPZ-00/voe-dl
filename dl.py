@@ -49,7 +49,6 @@ def signal_handler(signum, frame):
 # Create a session that persists across requests
 session = requests.Session()
 
-
 def get_browser_headers(url=None):
     """Generate realistic browser headers with optional referer based on URL"""
     parsed_url = urlparse(url) if url else None
@@ -175,17 +174,33 @@ def parse_arguments():
     group.add_argument("-u", "--url", dest="is_url", action="store_true", help="Treat target as single URL")
     group.add_argument("-l", "--list", dest="is_list", action="store_true", help="Treat target as list file")
     parser.add_argument("-w", "--workers", type=int, default=4, help="Parallel downloads for -l (default: 4)")
+    parser.add_argument("-p", "--proxy", type=ascii, dest="proxy", help="Specify a proxy url to use, currently only accepting http:// and https:// urls.")
     parser.add_argument("--name", help="Base name for output files (used with --numbering or placeholders)")
     parser.add_argument("--numbering", action="store_true", help="Add S01E01-style numbering based on line order")
     parser.add_argument("--dry-run", action="store_true", help="Print actions without downloading")
     return parser.parse_args()
 
-def main():
+def main():  
     args = parse_arguments()
     
     # Register signal handler once for the entire process
     signal.signal(signal.SIGINT, signal_handler)
     _global_stop_event.clear()
+    
+    # assign proxy to requests session
+    if args.proxy != "":
+        # set proxy_url for the requests session
+        if args.proxy.startswith("http://"):
+            session.proxies = {
+                "http": args.proxy,
+            }
+        elif args.proxy.startswith("https://"):
+            session.proxies = {
+                "https": args.proxy,
+            }
+        else:
+            print("Proxy url is invalid. Use -h for Help") # advise the user that the proxy url is invalid
+            quit()
 
     if args.is_list:
         list_dl(args.target, args)
@@ -345,6 +360,17 @@ def list_dl(doc, args):
 def flush_piped_link(url):
     """Restore the real stdout and write only the resolved link, for piped usage."""
     sys.stdout = sys.stdout_real
+    sys.stdout.write(url + "\n")
+    sys.stdout.flush()
+
+def flush_and_restore_stdout(url):
+    """
+    Write url to stdout and flush it. Then restore the original stdout that was replaced with StringIO.
+    """
+    # Restore stdout
+    sys.stdout = sys.stdout_real
+
+    # Flush only the URL to the pipe
     sys.stdout.write(url + "\n")
     sys.stdout.flush()
 
@@ -844,6 +870,12 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                     print(f"[!] Download aborted before starting MP4 download: {URL}")
                     return
 
+                # If the output is piped
+                if PIPED:
+                    flush_and_restore_stdout(link)
+                    # Exit the process, so that it does not actually download the file
+                    exit()
+
                 print(f"[*] Downloading MP4 stream: {link}")
                 if dry_run:
                     print(f"[Dry Run] Would download: {link} to {name}")
@@ -859,6 +891,7 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                         'no_warnings': False,
                         'http_headers': headers,
                         'progress_hooks': [progress_hook],
+                        'proxy': args.proxy,
                     }
                     with YoutubeDL(ydl_opts) as ydl:
                         try:
@@ -900,6 +933,12 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                     print(f"[!] Download aborted before starting HLS download: {URL}")
                     return
 
+                # If the output is piped
+                if PIPED:
+                    flush_and_restore_stdout(link)
+                    # Exit the process, so that it does not actually download the file
+                    exit()
+
                 print(f"[*] Downloading HLS stream: {link}")
                 if dry_run:
                     print(f"[Dry Run] Would download: {link} to {name}")
@@ -915,6 +954,7 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                         'no_warnings': False,
                         'http_headers': headers,
                         'progress_hooks': [progress_hook],
+                        'proxy': args.proxy,
                     }
                     with YoutubeDL(ydl_opts) as ydl:
                         try:
@@ -1018,4 +1058,14 @@ def clean_base64(s):
         return None
 
 if __name__ == "__main__":
+
     main()
+
+
+
+
+
+
+
+
+
