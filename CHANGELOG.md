@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v1.9.0] - Modularization
+**Release Date**: 2026-07-02
+
+### Changed
+- Split the single `dl.py` file into a proper `voe_dl` package: each of the 8 source-detection methods now lives in its own file under `voe_dl/sources/`, with separate modules for HTTP handling, decoding helpers, bait detection, filename generation, abort/signal handling, piping, download orchestration, and the CLI.
+- Method 7's inline rot13/character-shift helpers were deduplicated to reuse the shared decoding primitives also used by Method 8, instead of redefining them.
+- Entry points repointed at the package: the `voe-dl` console script now targets `voe_dl.cli:main`, and the PyInstaller build targets `voe_dl/__main__.py`. Root `dl.py` is removed.
+- Dropped `download_file()`, a dead code path unreferenced anywhere in the project.
+- Verified behavior-preserving via golden-output diffing against the pre-refactor implementation across all 8 methods, iframe fallback, no-match handling, piped output, and threaded list mode.
+
+---
+
 ## [v1.8.1] - Piped Link Output
 **Release Date**: 2026-07-02
 
