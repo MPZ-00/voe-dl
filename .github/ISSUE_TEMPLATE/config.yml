@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: MPZ-00's Fork
+    url: https://github.com/MPZ-00/voe-dl
+    about: Check here for the latest code before filing an issue here.
