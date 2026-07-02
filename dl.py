@@ -174,7 +174,7 @@ def parse_arguments():
     group.add_argument("-u", "--url", dest="is_url", action="store_true", help="Treat target as single URL")
     group.add_argument("-l", "--list", dest="is_list", action="store_true", help="Treat target as list file")
     parser.add_argument("-w", "--workers", type=int, default=4, help="Parallel downloads for -l (default: 4)")
-    parser.add_argument("-p", "--proxy", type=ascii, dest="proxy", help="Specify a proxy url to use, currently only accepting http:// and https:// urls.")
+    parser.add_argument("-p", "--proxy", type=str, dest="proxy", help="Specify a proxy url to use, currently only accepting http:// and https:// urls.")
     parser.add_argument("--name", help="Base name for output files (used with --numbering or placeholders)")
     parser.add_argument("--numbering", action="store_true", help="Add S01E01-style numbering based on line order")
     parser.add_argument("--dry-run", action="store_true", help="Print actions without downloading")
@@ -188,7 +188,7 @@ def main():
     _global_stop_event.clear()
     
     # assign proxy to requests session
-    if args.proxy != "":
+    if args.proxy:
         # set proxy_url for the requests session
         if args.proxy.startswith("http://"):
             session.proxies = {
