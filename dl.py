@@ -175,22 +175,39 @@ def parse_arguments():
     group.add_argument("-u", "--url", dest="is_url", action="store_true", help="Treat target as single URL")
     group.add_argument("-l", "--list", dest="is_list", action="store_true", help="Treat target as list file")
     parser.add_argument("-w", "--workers", type=int, default=4, help="Parallel downloads for -l (default: 4)")
+    parser.add_argument("-p", "--proxy", type=ascii, dest="proxy", help="Specify a proxy url to use, currently only accepting http:// and https:// urls.")
     parser.add_argument("--name", help="Base name for output files (used with --numbering or placeholders)")
     parser.add_argument("-d", "--directoy", type=pathlib.Path, dest="output_dir", default=".", help="Specify the output directory")
     parser.add_argument("--numbering", action="store_true", help="Add S01E01-style numbering based on line order")
     parser.add_argument("--dry-run", action="store_true", help="Print actions without downloading") 
     return parser.parse_args()
 
-def main():   
+def main():  
     args = parse_arguments()
     
     # Register signal handler once for the entire process
     signal.signal(signal.SIGINT, signal_handler)
     _global_stop_event.clear()
     
+    # validate output directory
     if not os.path.isdir(args.output_dir):
       print("The output directory \""+args.output_dir+"\" is not a valid folder.") # tell the user about the invalid output directory
       quit()
+    
+    # assign proxy to requests session
+    if args.proxy != "":
+        # set proxy_url for the requests session
+        if args.proxy.startswith("http://"):
+            session.proxies = {
+                "http": args.proxy,
+            }
+        elif args.proxy.startswith("https://"):
+            session.proxies = {
+                "https": args.proxy,
+            }
+        else:
+            print("Proxy url is invalid. Use -h for Help") # advise the user that the proxy url is invalid
+            quit()
 
     if args.is_list:
         list_dl(args.target, args)
@@ -881,6 +898,7 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                         'no_warnings': False,
                         'http_headers': headers,
                         'progress_hooks': [progress_hook],
+                        'proxy': args.proxy,
                     }
                     with YoutubeDL(ydl_opts) as ydl:
                         try:
@@ -943,6 +961,7 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                         'no_warnings': False,
                         'http_headers': headers,
                         'progress_hooks': [progress_hook],
+                        'proxy': args.proxy,
                     }
                     with YoutubeDL(ydl_opts) as ydl:
                         try:
@@ -1048,6 +1067,9 @@ def clean_base64(s):
 if __name__ == "__main__":
 
     main()
+
+
+
 
 
 
