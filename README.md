@@ -143,6 +143,11 @@ voe-dl -u https://voe.sx/yourvideo | xargs -I{} wget {}
 ## 📂 Output
 
 Downloaded videos will be saved in the same folder where you run the command.
+But this can be changed using the `-d` option to specify a target directory.
+```bash
+voe-dl -d downloads
+```
+Attention: The target directory must be existent when running the script
 
 ---
 
@@ -189,3 +194,4 @@ This will print all available options:
 ## 💡 Contributing
 
 Pull requests are welcome! If you fix a bug or add a feature, please update the README accordingly.
+

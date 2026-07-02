@@ -16,6 +16,7 @@ import time
 import argparse
 from urllib.parse import urlparse, urljoin
 from io import StringIO
+import pathlib
 
 # When stdout is piped, buffer all print() output and only emit the
 # resolved download link at the end (ported from upstream PR #52 by @Czer0xx)
@@ -176,8 +177,9 @@ def parse_arguments():
     parser.add_argument("-w", "--workers", type=int, default=4, help="Parallel downloads for -l (default: 4)")
     parser.add_argument("-p", "--proxy", type=str, dest="proxy", help="Specify a proxy url to use, currently only accepting http:// and https:// urls.")
     parser.add_argument("--name", help="Base name for output files (used with --numbering or placeholders)")
+    parser.add_argument("-d", "--directoy", type=pathlib.Path, dest="output_dir", default=".", help="Specify the output directory")
     parser.add_argument("--numbering", action="store_true", help="Add S01E01-style numbering based on line order")
-    parser.add_argument("--dry-run", action="store_true", help="Print actions without downloading")
+    parser.add_argument("--dry-run", action="store_true", help="Print actions without downloading") 
     return parser.parse_args()
 
 def main():  
@@ -186,6 +188,11 @@ def main():
     # Register signal handler once for the entire process
     signal.signal(signal.SIGINT, signal_handler)
     _global_stop_event.clear()
+    
+    # validate output directory
+    if not os.path.isdir(args.output_dir):
+      print("The output directory \""+args.output_dir+"\" is not a valid folder.") # tell the user about the invalid output directory
+      quit()
     
     # assign proxy to requests session
     if args.proxy:
@@ -886,7 +893,7 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                             raise DownloadAbortedException("Download aborted by user")
                     
                     ydl_opts = {
-                        'outtmpl': name,
+                        'outtmpl': os.path.join(args.output_dir, name),
                         'quiet': False,
                         'no_warnings': False,
                         'http_headers': headers,
@@ -949,7 +956,7 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                             raise DownloadAbortedException("Download aborted by user")
                     
                     ydl_opts = {
-                        'outtmpl': name,
+                        'outtmpl': os.path.join(args.output_dir, name),
                         'quiet': False,
                         'no_warnings': False,
                         'http_headers': headers,
@@ -995,7 +1002,7 @@ def download_file(url, filename, referer_url=None):
             r.raise_for_status()
             total_size = int(r.headers.get('content-length', 0))
 
-            with open(filename, 'wb') as f:
+            with open(os.path.join(OUTPUT_DIR, filename), 'wb') as f:
                 if total_size == 0:
                     print("[!] Unknown file size. Downloading...")
                     f.write(r.content)
@@ -1015,7 +1022,7 @@ def download_file(url, filename, referer_url=None):
         print(f"[!] Error downloading file: {e}")
         # Fall back to wget if our method fails
         print("[*] Falling back to wget...")
-        wget.download(url, out=filename)
+        wget.download(url, out=os.path.join(OUTPUT_DIR, filename))
 
 def delpartfiles():
     path = os.getcwd()
