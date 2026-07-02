@@ -1002,7 +1002,7 @@ def download_file(url, filename, referer_url=None):
             r.raise_for_status()
             total_size = int(r.headers.get('content-length', 0))
 
-            with open(os.path.join(OUTPUT_DIR, filename), 'wb') as f:
+            with open(os.path.join(args.output_dir, filename), 'wb') as f:
                 if total_size == 0:
                     print("[!] Unknown file size. Downloading...")
                     f.write(r.content)
@@ -1022,7 +1022,7 @@ def download_file(url, filename, referer_url=None):
         print(f"[!] Error downloading file: {e}")
         # Fall back to wget if our method fails
         print("[*] Falling back to wget...")
-        wget.download(url, out=os.path.join(OUTPUT_DIR, filename))
+        wget.download(url, out=os.path.join(args.output_dir, filename))
 
 def delpartfiles():
     path = os.getcwd()
