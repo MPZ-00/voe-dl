@@ -1,0 +1,59 @@
+name: Bug Report
+description: Report a problem with voe-dl
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Active development happens at [MPZ-00's fork](https://github.com/MPZ-00/voe-dl) before landing here, so please confirm the bug still reproduces there first.
+
+  - type: checkboxes
+    id: latest-fork
+    attributes:
+      label: Confirmation
+      options:
+        - label: I confirmed this issue still reproduces on the latest code at https://github.com/MPZ-00/voe-dl
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact command(s) run. Include the target site/URL pattern if relevant (redact the actual URL if needed).
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: voe-dl version
+      description: From `voe-dl -h` or the top of the version history.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      render: shell

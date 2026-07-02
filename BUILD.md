@@ -2,20 +2,19 @@
 # 🛠️ How to Build `voe-dl.exe`
 
 ## Requirements
-- Python 3.8+ installed
-- `pip install pyinstaller`
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 
 ---
 
 ## 🧱 Build Instructions
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-pip install pyinstaller
+# Install dependencies (including pyinstaller)
+uv sync
+uv add --dev pyinstaller
 
 # Build the executable
-pyinstaller --onefile --name=voe-dl dl.py
+uv run pyinstaller --onefile --name=voe-dl dl.py
 ```
 
 This will create:

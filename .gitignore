@@ -13,10 +13,13 @@ debug_page*
 # Build and distribution directories
 build/
 dist/
+__pycache__/
+
+# uv virtual environment
+.venv/
 
 # IDE and editor files
 .vscode/
 
 # Exceptions
-!requirements.txt
 !links.txt

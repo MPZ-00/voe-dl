@@ -4,6 +4,47 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v1.8.1] - Piped Link Output
+**Release Date**: 2026-07-02
+
+### Added
+- When stdout is piped (e.g. `voe-dl -u <url> | xargs ...`), only the resolved download link is written to stdout and the actual download is skipped. All other log output is suppressed for piped runs.
+- Ported from upstream PR #52 by @Czer0xx, adapted to the current redirect-following and multi-threaded `download()` implementation.
+
+---
+
+## [v1.8.0] - CLI and Abort Improvements
+**Release Date**: 2025-11-19
+
+### Added
+- Custom filename generation system with `--name` flag
+- Episode tagging support with `--numbering` flag (extracts S##E## from URLs or generates sequential numbering)
+- Dry-run mode with `--dry-run` flag to test downloads without actually downloading
+- Graceful abort handling with Ctrl+C (SIGINT signal handler)
+- Interactive cleanup prompt on abort: choose to keep or delete `.part` files
+- Progress hooks in yt-dlp downloads to respect abort signals
+- Thread-safe argument passing for parallel downloads
+
+### Changed
+- Improved multi-threaded download coordination with global stop event
+- Enhanced executor shutdown to properly cancel pending futures on abort
+- Mutually exclusive `-u` and `-l` arguments for better CLI validation
+- Better responsiveness to abort signals during active downloads
+
+### Fixed
+- Ctrl+C now properly stops all download threads immediately
+- Fixed `PermissionError` when cleaning up `.part` files during active downloads
+- Fixed `CancelledError` tracebacks by catching them silently
+- Thread-safe operations by using `copy.deepcopy()` for argument objects
+
+## [v1.7.4] - Dependency Cleanup
+**Release Date**: 2025-06-15
+
+### Removed
+- Removed unnecessary `base64` package from `requirements.txt` (native Python module), thanks to @hyperlexus
+
+---
+
 ## [v1.7.3] - Documentation Updates
 **Release Date**: 2025-05-28
 
