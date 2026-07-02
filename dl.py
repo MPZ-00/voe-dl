@@ -48,7 +48,6 @@ def signal_handler(signum, frame):
 
 # Create a session that persists across requests
 session = requests.Session()
-PROXY_URL = ""
 
 def get_browser_headers(url=None):
     """Generate realistic browser headers with optional referer based on URL"""
@@ -181,9 +180,7 @@ def parse_arguments():
     parser.add_argument("--dry-run", action="store_true", help="Print actions without downloading")
     return parser.parse_args()
 
-def main():
-    global PROXY_URL
-    
+def main():  
     args = parse_arguments()
     
     # Register signal handler once for the entire process
@@ -192,16 +189,14 @@ def main():
     
     # assign proxy to requests session
     if args.proxy != "":
-        PROXY_URL = args.proxy # set proxy url for yt_dlp
-
         # set proxy_url for the requests session
-        if PROXY_URL.startswith("http://"):
+        if args.proxy.startswith("http://"):
             session.proxies = {
-                "http": PROXY_URL,
+                "http": args.proxy,
             }
-        elif PROXY_URL.startswith("https://"):
+        elif args.proxy.startswith("https://"):
             session.proxies = {
-                "https": PROXY_URL,
+                "https": args.proxy,
             }
         else:
             print("Proxy url is invalid. Use -h for Help") # advise the user that the proxy url is invalid
@@ -896,7 +891,7 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                         'no_warnings': False,
                         'http_headers': headers,
                         'progress_hooks': [progress_hook],
-                        'proxy': PROXY_URL,
+                        'proxy': args.proxy,
                     }
                     with YoutubeDL(ydl_opts) as ydl:
                         try:
@@ -959,7 +954,7 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                         'no_warnings': False,
                         'http_headers': headers,
                         'progress_hooks': [progress_hook],
-                        'proxy': PROXY_URL,
+                        'proxy': args.proxy,
                     }
                     with YoutubeDL(ydl_opts) as ydl:
                         try:
