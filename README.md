@@ -44,27 +44,28 @@ A Python-based downloader for videos hosted on [voe.sx](https://voe.sx).
 
 ### Method 2: Running from Python Source Code
 
-1. **Install Python**  
-   [Download Python](https://www.python.org/downloads) and make sure to check the box:
-   - ✅ "Add Python to PATH"
+1. **Install [uv](https://docs.astral.sh/uv/getting-started/installation/)**  
+   A fast Python package/project manager. It installs its own Python if needed, so a separate Python install isn't required.
 
 2. **Clone or download the repository**
 
-3. **Install requirements**  
+3. **Install dependencies**  
    In the project folder:
    ```cmd
-   pip install -r requirements.txt
+   uv sync
    ```
 
 4. **Run the script**
    ```cmd
-   python dl.py -u https://voe.sx/yourvideo
+   uv run dl.py -u https://voe.sx/yourvideo
    ```
 
 5. **See all options**
    ```cmd
-   python dl.py -h
+   uv run dl.py -h
    ```
+
+> Prefer plain `pip`? `pip install .` also works, since dependencies are declared in `pyproject.toml`.
 
 ---
 
