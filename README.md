@@ -131,6 +131,12 @@ Press `Ctrl+C` to gracefully abort downloads. You'll be prompted to either:
 - **Keep** `.part` files to resume later
 - **Delete** `.part` files to start fresh next time
 
+### Piped Output
+When stdout is piped, `voe-dl` resolves the video and prints only the direct download link instead of downloading it:
+```bash
+voe-dl -u https://voe.sx/yourvideo | xargs -I{} wget {}
+```
+
 ---
 
 ## 📂 Output

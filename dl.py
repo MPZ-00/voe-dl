@@ -15,6 +15,14 @@ import random
 import time
 import argparse
 from urllib.parse import urlparse, urljoin
+from io import StringIO
+
+# When stdout is piped, buffer all print() output and only emit the
+# resolved download link at the end (ported from upstream PR #52 by @Czer0xx)
+PIPED = not sys.stdout.isatty()
+if PIPED:
+    sys.stdout_real = sys.stdout
+    sys.stdout = StringIO()
 
 # List of common user agents for rotation
 USER_AGENTS = [
@@ -201,12 +209,14 @@ def main():
                 prompt_partial_file_cleanup()
             else:
                 # Normal completion - clean up
-                print("[*] Cleaning up temporary files...")
+                if not PIPED:
+                    print("[*] Cleaning up temporary files...")
                 delpartfiles()
 
 def get_version_history():
     return (
         "\nVersion History:\n"
+        "- Version v1.8.1 (Piped output: print only the resolved link when stdout is piped, ported from @Czer0xx)\n"
         "- Version v1.8.0 (CLI improvements, custom filename generation, episode tagging, dry-run mode)\n"
         "- Version v1.7.1 (Improved bait detection)\n"
         "- Version v1.7.0 (Method 8 for source detection by @Domkeykong)\n"
@@ -215,7 +225,7 @@ def get_version_history():
         "- Version v1.5.0 (Improved source detection and bait handling)\n"
         "- Version v1.4.0 (Forked by MPZ-00)\n"
         "- Version v1.3.1 (Forked by HerobrineTV, Fixed issues with finding the Download Links)\n"
-        "\nCredits to @NikOverflow, @cuitrlal, @cybersnash, @HerobrineTV and @MPZ-00 on GitHub for contributing\n"
+        "\nCredits to @NikOverflow, @cuitrlal, @cybersnash, @HerobrineTV, @Czer0xx and @MPZ-00 on GitHub for contributing\n"
     )
 
 def list_dl(doc, args):
@@ -330,6 +340,13 @@ def list_dl(doc, args):
                 # Clean up after successful completion
                 print("[*] Cleaning up temporary files...")
                 delpartfiles()
+
+
+def flush_piped_link(url):
+    """Restore the real stdout and write only the resolved link, for piped usage."""
+    sys.stdout = sys.stdout_real
+    sys.stdout.write(url + "\n")
+    sys.stdout.flush()
 
 
 def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
@@ -818,6 +835,10 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                     ext = ".mp4"
                 name = f"{basename}_SS{ext}" if not custom_name else f"{custom_name}{ext}"
 
+                if PIPED:
+                    flush_piped_link(link)
+                    return
+
                 # Check for abort before starting download
                 if stop_event and stop_event.is_set():
                     print(f"[!] Download aborted before starting MP4 download: {URL}")
@@ -869,6 +890,10 @@ def download(url, args, stop_event=None, visited_urls=None, redirect_depth=0):
                 if not ext:
                     ext = ".mp4"  # HLS streams are typically downloaded as MP4
                 name = f"{basename}_SS{ext}" if not custom_name else f"{custom_name}{ext}"
+
+                if PIPED:
+                    flush_piped_link(link)
+                    return
 
                 # Check for abort before starting download
                 if stop_event and stop_event.is_set():

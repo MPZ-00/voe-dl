@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v1.8.1] - Piped Link Output
+**Release Date**: 2026-07-02
+
+### Added
+- When stdout is piped (e.g. `voe-dl -u <url> | xargs ...`), only the resolved download link is written to stdout and the actual download is skipped. All other log output is suppressed for piped runs.
+- Ported from upstream PR #52 by @Czer0xx, adapted to the current redirect-following and multi-threaded `download()` implementation.
+
+---
+
 ## [v1.8.0] - CLI and Abort Improvements
 **Release Date**: 2025-11-19
 
