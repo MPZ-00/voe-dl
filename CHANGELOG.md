@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v1.8.2] - Proxy and Output Directory Support
+**Release Date**: 2026-07-02
+
+### Added
+- `--proxy` flag to route requests through an HTTP/HTTPS proxy (also passed through to yt-dlp downloads), contributed by @BlockyBlockling
+- `--output-dir` flag to specify a custom output directory for downloaded files, contributed by @BlockyBlockling
+
+### Fixed
+- Crash and broken validation when passing `--proxy` without a valid value
+- `--output-dir` not being applied to `wget`-based downloads due to missing global scope propagation
+
+### Changed
+- Migrated project setup from pip/venv to [uv](https://github.com/astral-sh/uv)
+- Added GitHub bug report issue template
+
+---
+
 ## [v1.8.1] - Piped Link Output
 **Release Date**: 2026-07-02
 
